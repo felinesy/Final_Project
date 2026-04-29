@@ -134,4 +134,59 @@ public class GamePanel extends JPanel implements Runnable{
         }
     }
 
+    @Override
+    public void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2 = (Graphics2D) g;
+
+        // Title screen
+        if (gameState == titleState) {
+            g2.drawImage(titleGif, 0, 0, getWidth(), getHeight(), null);
+            ui.draw(g2);
+        } else {
+            // Draw tiles first
+            tileM.draw(g2);
+
+            entityList.clear();
+            entityList.add(player);
+
+            for (int i = 0; i < obj[1].length; i++) { //null object
+                if (obj[currentMap][i] != null) {
+                    int screenX = obj[currentMap][i].worldX - player.worldX + player.screenX;
+                    int screenY = obj[currentMap][i].worldY - player.worldY + player.screenY;
+
+                    boolean isVisible =
+                            obj[currentMap][i].worldX + tileSize > player.worldX - player.screenX &&
+                                    obj[currentMap][i].worldX - tileSize < player.worldX + player.screenX &&
+                                    obj[currentMap][i].worldY + tileSize > player.worldY - player.screenY &&
+                                    obj[currentMap][i].worldY - tileSize < player.worldY + player.screenY;
+
+                    if (isVisible) {
+                        g2.drawImage(obj[currentMap][i].image, screenX, screenY, tileSize, tileSize, null);
+                    }
+                }
+            }
+
+            // Add animals
+            for (int i = 0; i < animals[currentMap].length; i++) {
+                if (animals[currentMap][i] != null) {
+                    entityList.add(animals[currentMap][i]);
+                }
+            }
+
+            // Sort entities by worldY for correct overlapping
+            entityList.sort(Comparator.comparingInt(e -> e.worldY));
+
+            for (Entity entity : entityList) {
+                entity.draw(g2);
+            }
+
+            eManager.draw(g2);
+            ui.draw(g2);
+        }
+
+        g2.dispose();
+    }
+}
+
 
