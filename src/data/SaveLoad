@@ -27,3 +27,33 @@ public class SaveLoad {
         }
         return obj;
     }
+
+    public void save() {
+        try {
+            File savesDir = new File("saves");
+            if (!savesDir.exists()) savesDir.mkdir();
+
+            File saveFile = new File("saves/save.txt");
+            ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(saveFile));
+
+            DataStorage ds = new DataStorage();
+            ds.life = gp.player.life;
+            ds.mana = gp.player.mana;
+            ds.x = gp.player.worldX;
+            ds.y = gp.player.worldY;
+            ds.map = gp.currentMap;
+
+            for(int i=0; i<gp.player.inventory.size(); i++){
+                ds.itemNames.add(gp.player.inventory.get(i).name);
+                ds.itemAmount.add(gp.player.inventory.get(i).amount);
+            }
+
+            oos.writeObject(ds);
+            oos.close();
+            gp.ui.addMessage("SAVED!");
+            System.out.println("SAVED to " + saveFile.getAbsolutePath());
+        } catch (Exception e) {
+            System.out.println("Save ERROR: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
