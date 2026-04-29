@@ -120,3 +120,18 @@ public class GamePanel extends JPanel implements Runnable{
 
     }
 
+    public void update(){
+        if(gameState == playState){
+            player.update();
+
+            //animals
+            for(int i=0; i<animals[currentMap].length; i++){
+                if(animals[currentMap][i] != null)
+                    animals[currentMap][i].update();
+            }
+            eManager.update();
+            eHandler.checkEvent();
+        }
+    }
+
+
