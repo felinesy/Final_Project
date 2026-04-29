@@ -94,6 +94,29 @@ public class GamePanel extends JPanel implements Runnable{
         specialBookKeyMap.put("Sbook3", new Obj_SpecialKey("Skey3", this));
     }
 
+    public void setupGame(){
+        aSetter.setObject();
+        aSetter.setAnimals();
+        startMusic();
+        gameState = titleState;
+        eManager.setup();
+    }
+
+    public void startMusic() {
+        titleMusic = new Sound("/music/Dungeon4.wav");
+        gameMusic = new Sound("/music/Town1.wav");
+
+        if (titleMusic.clip != null) {
+            titleMusic.playLoop();
+        }
+    }
+
+    public void setMapIndex(int mapIndex) {
+        currentMapIndex = mapIndex;
+        eManager = new EnvironmentManager(this);
+        eManager.setup();
+    }
+
     public void startGameThread(){
         gameThread = new Thread(this);
         gameThread.start();
