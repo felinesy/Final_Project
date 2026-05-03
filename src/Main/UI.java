@@ -405,7 +405,7 @@ public class UI {
         y += gp.tileSize * 2;
 
         g2.setFont(nameFont);
-        String manager = "Project Manager: Pranz Nicole C. Rabe";
+        String manager = "Project Manager: Katrina S. Rubi";
         x = getXforCenteredText(manager);
         g2.setColor(Color.BLACK);
         g2.drawString(manager, x + 2, y + 2);
@@ -424,10 +424,8 @@ public class UI {
         y += 50;
 
         String[] members = {
-                "Leana Mariflor A. Belaguas",
-                "Reenah Mae R. Campilanan",
-                "Kylene J. Arong",
-                "Camila Rose A. Cordero"
+                "Zyril Wyne O. Sonsona",
+                "Charles Brayden P. Sanchez",
         };
 
         for (String member : members) {
