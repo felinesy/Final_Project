@@ -331,7 +331,7 @@ public class UI {
                 g2.setFont(new Font("SansSerif", Font.BOLD, 100)); // Fallback font
             }
 
-            String title = "THE LOST THICKET";
+            String title = "The Three Trials";
             int x = getXforCenteredText(title);
             int y = gp.tileSize * 4;
 
