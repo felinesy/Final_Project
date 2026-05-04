@@ -63,20 +63,35 @@ public class Entity {
     public void update() {
 
         if (knockBack == true) {
+            // Try to move in the knockback direction
+            switch (gp.player.direction) {
+                case "up": worldY -= speed; break;
+                case "down": worldY += speed; break;
+                case "left": worldX -= speed; break;
+                case "right": worldX += speed; break;
+            }
 
+            // Check for collisions after moving
+            collisionOn = false;
+            gp.ch.checkTile(this);
+            gp.ch.checkObject(this, false);
+            gp.ch.checkEntity(this, gp.npc);
+            gp.ch.checkEntity(this, gp.animals);
+
+            // If collision detected, revert the movement
             if (collisionOn == true) {
+                switch (gp.player.direction) {
+                    case "up": worldY += speed; break;
+                    case "down": worldY -= speed; break;
+                    case "left": worldX += speed; break;
+                    case "right": worldX -= speed; break;
+                }
+                // Stop knockback if blocked
                 knockBackCounter = 0;
                 knockBack = false;
                 speed = defaultSpeed;
-            } else if (collisionOn == false) {
-
-                switch (gp.player.direction) {
-                    case "up": worldY -= speed; break;
-                    case "down": worldY += speed; break;
-                    case "left": worldX -= speed; break;
-                    case "right": worldX += speed; break;
-                }
             }
+
             knockBackCounter++;
             if (knockBackCounter == 3) {
                 knockBackCounter = 0;
@@ -90,11 +105,21 @@ public class Entity {
 
                 setAction();  // Random movement
                 collisionOn = false;
+                
+                // Check player collision first before other collisions
+                boolean playerCollision = gp.ch.checkPlayer(this);
 
+                // Reset and check other collisions
+                collisionOn = false;
                 gp.ch.checkTile(this);
                 gp.ch.checkObject(this, false);
                 gp.ch.checkEntity(this, gp.animals);
                 gp.ch.checkEntity(this, gp.npc);
+                
+                // Restore player collision state
+                if (playerCollision) {
+                    collisionOn = true;
+                }
 
                 if (!collisionOn) {
                     switch (direction) {
@@ -104,34 +129,32 @@ public class Entity {
                         case "right": worldX += speed; break;
                     }
                 } else {
+                    // If hit player, deal damage and knockback
+                    if (playerCollision && this.entityType == 2 && !gp.player.invincible) {
+                        gp.player.life -= 1;
+                        gp.ui.addMessage("Update(entity): Player took damage from animal");
+                        gp.player.invincible = true;
+                        
+                        // Knockback player away from entity
+                        int dx = gp.player.worldX - worldX;
+                        int dy = gp.player.worldY - worldY;
+                        if (Math.abs(dx) > Math.abs(dy)) {
+                            gp.player.direction = (dx > 0) ? "right" : "left";
+                        } else {
+                            gp.player.direction = (dy > 0) ? "down" : "up";
+                        }
+                        gp.player.knockBack = true;
+                        gp.player.knockBackCounter = 0;
+                    } else if (!playerCollision) {
+                        // Only change direction if NOT colliding with player
+                        Random random = new Random();
+                        int i = random.nextInt(100) + 1;
 
-                    Random random = new Random();
-                    int i = random.nextInt(100) + 1;
-
-                    if (i <= 25) direction = "up";
-                    else if (i <= 50) direction = "down";
-                    else if (i <= 75) direction = "left";
-                    else direction = "right";
-                }
-            }
-
-            boolean contactPlayer = gp.ch.checkPlayer(this);
-            if (this.entityType == 2 && contactPlayer == true) {
-                if (!gp.player.invincible) {
-                    gp.player.life -= 1;
-                    gp.ui.addMessage("Update(entity): Player took damage from animal");
-                    gp.player.invincible = true;
-                    
-                    // Trigger player knockback - determine direction away from this entity
-                    int dx = gp.player.worldX - worldX;
-                    int dy = gp.player.worldY - worldY;
-                    if (Math.abs(dx) > Math.abs(dy)) {
-                        gp.player.direction = (dx > 0) ? "right" : "left";
-                    } else {
-                        gp.player.direction = (dy > 0) ? "down" : "up";
+                        if (i <= 25) direction = "up";
+                        else if (i <= 50) direction = "down";
+                        else if (i <= 75) direction = "left";
+                        else direction = "right";
                     }
-                    gp.player.knockBack = true;
-                    gp.player.knockBackCounter = 0;
                 }
             }
         }
@@ -181,13 +204,32 @@ public class Entity {
         collisionOn = false;
         gp.ch.checkTile(this);
         int objIndex = gp.ch.checkObject(this, true);
+        boolean playerCollision = gp.ch.checkPlayer(this);
 
-        if (!collisionOn && objIndex == 999) {
+        if (!collisionOn && !playerCollision && objIndex == 999) {
             switch (direction) {
                 case "up": worldY -= speed; break;
                 case "down": worldY += speed; break;
                 case "left": worldX -= speed; break;
                 case "right": worldX += speed; break;
+            }
+        } else if (playerCollision && this.entityType == 2) {
+            // If following player and hit player, deal damage and knockback
+            if (!gp.player.invincible) {
+                gp.player.life -= 1;
+                gp.ui.addMessage("Update(entity): Player took damage from animal");
+                gp.player.invincible = true;
+                
+                // Knockback player away from entity
+                int dx = gp.player.worldX - worldX;
+                int dy = gp.player.worldY - worldY;
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    gp.player.direction = (dx > 0) ? "right" : "left";
+                } else {
+                    gp.player.direction = (dy > 0) ? "down" : "up";
+                }
+                gp.player.knockBack = true;
+                gp.player.knockBackCounter = 0;
             }
         }
     }

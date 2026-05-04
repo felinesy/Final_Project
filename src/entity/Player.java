@@ -104,6 +104,7 @@ public class Player extends Entity {
         worldX = gp.tileSize * 89;
         worldY = gp.tileSize * 43;
         speed = 7;
+        defaultSpeed = speed;
         direction = "right";
         maxLife = 10;
         life = maxLife;
