@@ -9,7 +9,7 @@ Main {
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         window.setResizable(false);
 
-        window.setTitle("Title of Game");
+        window.setTitle("The Three Trials");
 
         GamePanel gamePanel = new GamePanel();
         window.add(gamePanel);
