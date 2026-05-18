@@ -179,10 +179,42 @@ public class CollisionChecker {
             case "right": entity.solidArea.x += entity.speed;break;
         }
 
-        if (entity.solidArea.intersects(gp.player.solidArea)){
-            entity.collisionOn = true;
-            contactPlayer = true;
+        if (entity.solidArea.intersects(gp.player.solidArea)) {
+
+    entity.collisionOn = true;
+    contactPlayer = true;
+
+    // Damage player only if not invincible
+    if (!gp.player.invincible) {
+
+        gp.player.takeDamage(1);
+
+        // Determine knockback direction
+        int dx = gp.player.worldX - entity.worldX;
+        int dy = gp.player.worldY - entity.worldY;
+
+        if (Math.abs(dx) > Math.abs(dy)) {
+
+            if (dx > 0) {
+                gp.player.direction = "right";
+            } else {
+                gp.player.direction = "left";
+            }
+
+        } else {
+
+            if (dy > 0) {
+                gp.player.direction = "down";
+            } else {
+                gp.player.direction = "up";
+            }
         }
+
+        gp.player.speed = 8;
+        gp.player.knockBack = true;
+        gp.player.invincible = true;
+    }
+}
 
         entity.solidArea.x = entity.solidAreaDefaultX;
         entity.solidArea.y = entity.solidAreaDefaultY;
