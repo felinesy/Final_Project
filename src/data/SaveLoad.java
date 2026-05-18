@@ -57,3 +57,41 @@ public class SaveLoad {
             e.printStackTrace();
         }
     }
+
+    public void load() {
+        try {
+            File saveFile = new File("saves/save.txt");
+            if (!saveFile.exists()) {
+                System.out.println("No save file found!");
+                return;
+            }
+
+            ObjectInputStream ois = new ObjectInputStream(new FileInputStream(saveFile));
+            DataStorage ds = (DataStorage) ois.readObject();
+
+            gp.player.life = ds.life;
+            gp.player.mana = ds.mana;
+            gp.player.worldX = ds.x;
+            gp.player.worldY = ds.y;
+            gp.currentMap = ds.map;
+
+            gp.player.inventory.clear();
+            for (int i = 0; i < ds.itemNames.size(); i++) {
+                Entity item = getObject(ds.itemNames.get(i));
+                if (item != null) {
+                    item.amount = ds.itemAmount.get(i);
+                    gp.player.inventory.add(item);
+                } else {
+                    System.out.println("Warning: Failed to load item \"" + ds.itemNames.get(i) + "\" — object is null.");
+                }
+            }
+
+
+            ois.close();
+            System.out.println("LOADED from " + saveFile.getAbsolutePath());
+        } catch (Exception e) {
+            System.out.println("Load ERROR: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+}
