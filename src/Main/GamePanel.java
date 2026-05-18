@@ -15,36 +15,36 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 
-public class GamePanel extends JPanel implements Runnable{
+public class GamePanel extends JPanel implements Runnable {
 
-    //display settings
-    final int originalTileSize = 16; //16x16
+    // display settings
+    final int originalTileSize = 16; // 16x16
     final int scale = 3;
     public final int tileSize = originalTileSize * scale;
 
-    //screen dimensions
+    // screen dimensions
     public final int screenWidth = tileSize * 18;
     public final int screenHeight = tileSize * 14;
 
-    //world settings
+    // world settings
     public final int maxWorldCol = 100;
     public final int maxWorldRow = 100;
-    public final int maxMap= 5;
+    public final int maxMap = 5;
     public int currentMap = 0;
     public int currentMapIndex = 0;
 
-    //game state control
+    // game state control
     public int gameState;
     public final int titleState = 0;
     public int playState = 1;
     public final int pauseState = 2;
     public final int dialogueState = 3;
-    public final int  characterState = 4;
+    public final int characterState = 4;
     public final int winState = 5;
     public final int creditsState = 6;
     public final int gameOverState = 7;
 
-    //managers
+    // managers
     public UI ui = new UI(this);
     public TileManager tileM = new TileManager(this);
     public KeyHandler keyH = new KeyHandler(this);
@@ -54,22 +54,22 @@ public class GamePanel extends JPanel implements Runnable{
     public Player player = new Player(this, keyH);
     public CollisionChecker ch = new CollisionChecker(this);
     public AssetSetter aSetter = new AssetSetter(this);
-    public QuizManager qm = new QuizManager (this);
+    public QuizManager qm = new QuizManager(this);
     public EventHandler eHandler = new EventHandler(this);
     SaveLoad saveLoad = new SaveLoad(this);
 
-    //entity
+    // entity
     public Entity npc[][] = new Entity[maxMap][10];
     public Entity animals[][] = new Entity[maxMap][100];
     public Entity obj[][] = new Entity[maxMap][100];
-    public  int chosenCharacter = 0;
+    public int chosenCharacter = 0;
     ArrayList<Entity> entityList = new ArrayList<>();
     public Obj_SpecialBook currentSpecialBook = null;
     public HashMap<String, Obj_SpecialKey> specialBookKeyMap = new HashMap<>();
     public boolean hasGuardianKey = false;
     public boolean hasSpecialKey = false;
 
-    //misc
+    // misc
     int FPS = 60;
     public long lastInteractionTime = 0;
     public Obj_Book currentBook = null;
@@ -77,9 +77,14 @@ public class GamePanel extends JPanel implements Runnable{
     private Sound titleMusic;
     private Sound gameMusic;
 
+    public GamePanel() {
+        java.net.URL gifURL = getClass().getResource("/tiles/bgTitle8_gif.gif");
 
-    public GamePanel(){
-        titleGif = new ImageIcon(getClass().getResource("/tile_assets/bgTitle8_gif.gif")).getImage();
+        if (gifURL == null) {
+            System.out.println("ERROR: bgTitle8_gif.gif not found!");
+        } else {
+            titleGif = new ImageIcon(gifURL).getImage();
+        }
         this.setPreferredSize(new Dimension(screenWidth, screenHeight)); // game size
         this.setBackground(Color.BLACK);
         this.setDoubleBuffered(true);
@@ -94,7 +99,7 @@ public class GamePanel extends JPanel implements Runnable{
         specialBookKeyMap.put("Sbook3", new Obj_SpecialKey("Skey3", this));
     }
 
-    public void setupGame(){
+    public void setupGame() {
         aSetter.setObject();
         aSetter.setAnimals();
         startMusic();
@@ -117,24 +122,24 @@ public class GamePanel extends JPanel implements Runnable{
         eManager.setup();
     }
 
-    public void startGameThread(){
+    public void startGameThread() {
         gameThread = new Thread(this);
         gameThread.start();
     }
 
     @Override
     public void run() {
-        double drawInterval = 1000000000/FPS;
+        double drawInterval = 1000000000 / FPS;
         double delta = 0;
         long lastTime = System.nanoTime();
         long currentTime;
 
-        while(gameThread != null){
+        while (gameThread != null) {
             currentTime = System.nanoTime();
-            delta += (currentTime-lastTime) / drawInterval;
+            delta += (currentTime - lastTime) / drawInterval;
             lastTime = currentTime;
 
-            if(delta >= 1) {
+            if (delta >= 1) {
                 update();
                 repaint();
                 delta--;
@@ -143,13 +148,13 @@ public class GamePanel extends JPanel implements Runnable{
 
     }
 
-    public void update(){
-        if(gameState == playState){
+    public void update() {
+        if (gameState == playState) {
             player.update();
 
-            //animals
-            for(int i=0; i<animals[currentMap].length; i++){
-                if(animals[currentMap][i] != null)
+            // animals
+            for (int i = 0; i < animals[currentMap].length; i++) {
+                if (animals[currentMap][i] != null)
                     animals[currentMap][i].update();
             }
             eManager.update();
@@ -173,16 +178,15 @@ public class GamePanel extends JPanel implements Runnable{
             entityList.clear();
             entityList.add(player);
 
-            for (int i = 0; i < obj[1].length; i++) { //null object
+            for (int i = 0; i < obj[1].length; i++) { // null object
                 if (obj[currentMap][i] != null) {
                     int screenX = obj[currentMap][i].worldX - player.worldX + player.screenX;
                     int screenY = obj[currentMap][i].worldY - player.worldY + player.screenY;
 
-                    boolean isVisible =
-                            obj[currentMap][i].worldX + tileSize > player.worldX - player.screenX &&
-                                    obj[currentMap][i].worldX - tileSize < player.worldX + player.screenX &&
-                                    obj[currentMap][i].worldY + tileSize > player.worldY - player.screenY &&
-                                    obj[currentMap][i].worldY - tileSize < player.worldY + player.screenY;
+                    boolean isVisible = obj[currentMap][i].worldX + tileSize > player.worldX - player.screenX &&
+                            obj[currentMap][i].worldX - tileSize < player.worldX + player.screenX &&
+                            obj[currentMap][i].worldY + tileSize > player.worldY - player.screenY &&
+                            obj[currentMap][i].worldY - tileSize < player.worldY + player.screenY;
 
                     if (isVisible) {
                         g2.drawImage(obj[currentMap][i].image, screenX, screenY, tileSize, tileSize, null);
@@ -211,5 +215,3 @@ public class GamePanel extends JPanel implements Runnable{
         g2.dispose();
     }
 }
-
-
