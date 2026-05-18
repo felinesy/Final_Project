@@ -438,6 +438,7 @@ public class TileManager {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
 
     public void setUp(int index, String imageName, boolean collision) {
         if (index < 0 || index >= tile.length) {
