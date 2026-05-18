@@ -244,34 +244,49 @@ public class Player extends Entity {
 
         // Handle knockback
         if (knockBack == true) {
-            // Apply knockback movement incrementally
-            switch (direction) {
-                case "up": worldY -= speed; break;
-                case "down": worldY += speed; break;
-                case "left": worldX -= speed; break;
-                case "right": worldX += speed; break;
-            }
 
-            // Check for collisions after moving
             collisionOn = false;
+
+            // Check future collision
             gp.ch.checkTile(this);
             gp.ch.checkObject(this, false);
             gp.ch.checkEntity(this, gp.npc);
+            gp.ch.checkEntity(this, gp.animals);
 
-            if (collisionOn == true) {
-                // Hit an obstacle, stop knockback
-                knockBackCounter = 0;
+            // Move only if no collision
+            if (!collisionOn) {
+
+                switch (direction) {
+                    case "up":
+                        worldY -= speed;
+                        break;
+
+                    case "down":
+                        worldY += speed;
+                        break;
+
+                    case "left":
+                        worldX -= speed;
+                        break;
+
+                    case "right":
+                        worldX += speed;
+                        break;
+                }
+            } else {
+                // Stop knockback on impact
                 knockBack = false;
+                knockBackCounter = 0;
                 speed = defaultSpeed;
             }
 
             knockBackCounter++;
-            if (knockBackCounter == 10) {
+
+            if (knockBackCounter >= 3) {
                 knockBackCounter = 0;
                 knockBack = false;
                 speed = defaultSpeed;
             }
-            return; // Return early during knockback to prevent normal movement
         }
 
         collisionOn = false;
