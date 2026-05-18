@@ -1,318 +1,291 @@
-package Main;
+package entity;
 
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
+import Main.GamePanel;
+import Main.UtilityTool;
 
-public class KeyHandler implements KeyListener {
-    public boolean upPressed, downPressed, leftPressed, rightPressed, spacePressed;
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.util.Random;
+
+public class Entity {
+    // entity properties
+    public int worldX, worldY;
+    public int speed;
+    public int defaultSpeed;
     GamePanel gp;
+    public String name;
+    public String description = "No description available";
+    public int entityType;
+    public int type;
+    public Entity currentLight;
+    public int lightRadius;
+    public final int type_light = 9;
 
-    public KeyHandler(GamePanel gp) {
+    // sprite animation
+    public BufferedImage up1, up2, down1, down2, left1, left2, right1, right2, fall;
+    public String direction = "down";
+    public int spriteCounter = 0;
+    public int spriteNum = 1;
+    public BufferedImage image, image2, image3;
+
+    // inventory item
+    public boolean stackable = false;
+    public int amount = 1;
+
+    // collision
+    public boolean collision = false;
+    public Rectangle solidArea = new Rectangle(8, 16, 30, 30);
+    public int solidAreaDefaultX;
+    public int solidAreaDefaultY;
+    public boolean collisionOn = false;
+    public double detectionRange = 100000.0;
+
+    // combat
+    public Rectangle attackArea = new Rectangle(0, 0, 0, 0);
+    public boolean knockBack = false;
+    int knockBackCounter = 0;
+    public boolean invincible = false;
+    public int invincibleCounter = 0;
+
+    // misc
+    public int maxLife;
+    public int life;
+    public int actionLockCounter = 0;
+
+    public Entity(GamePanel gp) {
         this.gp = gp;
     }
 
-    @Override
-    public void keyTyped(KeyEvent e) {
-        if (gp.qm.isTextInputActive) {
-            char c = e.getKeyChar();
-
-            if (Character.isLetterOrDigit(c) || c == ' ') {
-                gp.qm.userInput += c;
-            } else if (c == '\b' && gp.qm.userInput.length() > 0) {
-                gp.qm.userInput = gp.qm.userInput.substring(0, gp.qm.userInput.length() - 1);
-            } else if (c == '\n') {
-                checkTextAnswer();
-            }
-        }
+    public void setAction() {
     }
 
-    public void checkTextAnswer() {
-        if (gp.qm.currentGuardianQuestion == null) {
-            System.out.println("⚠️ ERROR: No active question.");
-            return;
-        }
+    public void update() {
 
-        String userAnswer = gp.qm.userInput.trim();
+        if (knockBack == true) {
 
-        if (gp.qm.currentGuardianQuestion.isCorrect(userAnswer)) {
-            gp.ui.addMessage("Correct Answer!");
-            gp.qm.guardianCorrectAnswers++;
-            gp.qm.guardianQuestionIndex++;
+            collisionOn = false;
 
-            if (gp.qm.guardianCorrectAnswers == 3) {
-                gp.qm.giveGuardianKeyToPlayer();
-                gp.qm.isGuardianQuizActive = false;
-                gp.qm.isQuestionActive = false;
-                gp.qm.endGuardianQuiz();
+            // Check future collision
+            gp.ch.checkTile(this);
+            gp.ch.checkObject(this, false);
+            gp.ch.checkEntity(this, gp.npc);
+            gp.ch.checkEntity(this, gp.animals);
 
-                gp.ui.currentDialogue = "You have proven your wisdom. \n The Guardian grants you a special key. \n You may now return home, little soul.";
-                gp.gameState = gp.dialogueState;
-                gp.repaint();
+            // Move only if no collision
+            if (!collisionOn) {
+
+                switch (direction) {
+                    case "up":
+                        worldY -= speed;
+                        break;
+
+                    case "down":
+                        worldY += speed;
+                        break;
+
+                    case "left":
+                        worldX -= speed;
+                        break;
+
+                    case "right":
+                        worldX += speed;
+                        break;
+                }
             } else {
-                gp.qm.askNextGuardianQuestion();
+                // Stop knockback on impact
+                knockBack = false;
+                knockBackCounter = 0;
+                speed = defaultSpeed;
+            }
+
+            knockBackCounter++;
+
+            if (knockBackCounter >= 3) {
+                knockBackCounter = 0;
+                knockBack = false;
+                speed = defaultSpeed;
             }
         } else {
-            gp.qm.guardianAttempts--;
-            gp.ui.addMessage("Incorrect! Attempts remaining: " + gp.qm.guardianAttempts);
-
-            if (gp.qm.guardianAttempts == 0) {
-                gp.qm.showResetDialogue();
+            if (isPlayerInRange()) {
+                followPlayer();
             } else {
-                gp.ui.addMessage("Try again.");
-            }
-        }
-        gp.qm.userInput = "";
-    }
 
-    @Override
-    public void keyPressed(KeyEvent e) {
-        int code = e.getKeyCode();
+                setAction(); // Random movement
+                collisionOn = false;
 
-        if (gp.gameState == gp.titleState) {
-            titleState(code);
-        } else if (gp.gameState == gp.playState) {
-            playState(e);
-        } else if (gp.gameState == gp.pauseState) {
-            pauseState(code);
-        } else if (gp.gameState == gp.dialogueState) {
-            dialogueState(code);
-        } else if (gp.gameState == gp.characterState) {
-            characterState(code);
-        } else if (gp.gameState == gp.creditsState) {
-            if (code == KeyEvent.VK_ESCAPE) {
-                gp.gameState = gp.titleState;
-                gp.ui.titleScreenState = 0;
-            }
-        }
-        else if (gp.gameState == gp.winState) {
-            if (code == KeyEvent.VK_ENTER) {
-                gp.gameState = gp.titleState;
-            }
-        }
-        else if (gp.gameState == gp.gameOverState) {
-            gp.qm.restartGame();
-        }
-    }
+                gp.ch.checkTile(this);
+                gp.ch.checkObject(this, false);
+                gp.ch.checkEntity(this, gp.animals);
+                gp.ch.checkEntity(this, gp.npc);
 
-    public void titleState(int code) {
-        if (gp.ui.tutorialState == 1) {
-            if (code == KeyEvent.VK_ENTER) {
-                gp.ui.tutorialState = 0;
-                gp.gameState = gp.playState;
-            } else if (code == KeyEvent.VK_ESCAPE) {
-                gp.ui.tutorialState = 0; // back to character selection
-                gp.ui.titleScreenState = 1;
-            }
-        } else if (gp.ui.titleScreenState == 0) {
-            if (code == KeyEvent.VK_UP || code == KeyEvent.VK_W) {
-                gp.ui.commandNum--;
-                if (gp.ui.commandNum < 0) {
-                    gp.ui.commandNum = 3;
+                if (!collisionOn) {
+                    switch (direction) {
+                        case "up":
+                            worldY -= speed;
+                            break;
+                        case "down":
+                            worldY += speed;
+                            break;
+                        case "left":
+                            worldX -= speed;
+                            break;
+                        case "right":
+                            worldX += speed;
+                            break;
+                    }
+                } else {
+
+                    Random random = new Random();
+                    int i = random.nextInt(100) + 1;
+
+                    if (i <= 25)
+                        direction = "up";
+                    else if (i <= 50)
+                        direction = "down";
+                    else if (i <= 75)
+                        direction = "left";
+                    else
+                        direction = "right";
                 }
             }
-            if (code == KeyEvent.VK_DOWN || code == KeyEvent.VK_S) {
-                gp.ui.commandNum++;
-                if (gp.ui.commandNum > 3) {
-                    gp.ui.commandNum = 0;
+
+            boolean contactPlayer = gp.ch.checkPlayer(this);
+            if (this.entityType == 2 && contactPlayer == true) {
+                if (!gp.player.invincible) {
+                    gp.player.life -= 1;
+                    gp.ui.addMessage("Update(entity): Player took damage from animal");
+                    gp.player.invincible = true;
                 }
             }
-            if (code == KeyEvent.VK_ENTER) {
-                if (gp.ui.commandNum == 0) {
-                    gp.ui.titleScreenState = 1;
-                }
-                if (gp.ui.commandNum == 1) {
-                    gp.saveLoad.load();
-                    gp.gameState = gp.playState;
-                }
-                if (gp.ui.commandNum == 2) {
-                    gp.gameState = gp.creditsState; // Go to Credits
-                }
-                if (gp.ui.commandNum == 3) {
-                    System.exit(0); // Quit
-                }
-            }
-        } else if (gp.ui.titleScreenState == 1) { // Select character
-            if (code == KeyEvent.VK_LEFT || code == KeyEvent.VK_A) {
-                gp.ui.commandNum--;
-                if (gp.ui.commandNum < 0) {
-                    gp.ui.commandNum = 3;
-                }
-            }
-            if (code == KeyEvent.VK_RIGHT || code == KeyEvent.VK_D) {
-                gp.ui.commandNum++;
-                if (gp.ui.commandNum > 3) {
-                    gp.ui.commandNum = 0;
-                }
-            }
-            if (code == KeyEvent.VK_ENTER) {
-                if (gp.ui.commandNum == 0) {
-                    System.out.println("Character selected: Elden");
-                    gp.chosenCharacter = 0;
-                } else if (gp.ui.commandNum == 1) {
-                    System.out.println("Character selected: Brianna");
-                    gp.chosenCharacter = 1;
-                    gp.player.getPlayerImage();
-                } else if (gp.ui.commandNum == 2) {
-                    System.out.println("Character selected: Orion");
-                    gp.chosenCharacter = 2;
-                    gp.player.getPlayerImage();
-                } else if (gp.ui.commandNum == 3) {
-                    gp.ui.titleScreenState = 0;
-                }
-                if (gp.ui.commandNum != 3) {
-                    gp.ui.tutorialState = 1;
-                }
+        }
+
+        // Sprite animation
+        spriteCounter++;
+        if (spriteCounter > 12) {
+            spriteNum = (spriteNum == 1) ? 2 : 1;
+            spriteCounter = 0;
+        }
+
+        // Invincibility timer
+        if (invincible == true) {
+            invincibleCounter++;
+            if (invincibleCounter > 40) {
+                invincible = false;
+                invincibleCounter = 0;
             }
         }
     }
 
+    public boolean isPlayerInRange() {
+        int dx = gp.player.worldX - worldX;
+        int dy = gp.player.worldY - worldY;
+        double distanceSquared = dx * dx + dy * dy;
 
-    public void playState(KeyEvent e) {
-        int code = e.getKeyCode();
-
-        if (gp.player.life <= 0) {
-            gp.gameState = gp.gameOverState;
-        } if (code == KeyEvent.VK_UP || code == KeyEvent.VK_W) {
-            upPressed = true;
-        } if (code == KeyEvent.VK_DOWN || code == KeyEvent.VK_S) {
-            downPressed = true;
-        } if (code == KeyEvent.VK_LEFT || code == KeyEvent.VK_A) {
-            leftPressed = true;
-        } if (code == KeyEvent.VK_RIGHT || code == KeyEvent.VK_D) {
-            rightPressed = true;
-        } if (code == KeyEvent.VK_SPACE) {
-            spacePressed = true;
-        } if (code == KeyEvent.VK_P) {
-            gp.gameState = gp.pauseState;
-            gp.ui.commandNum = 0;
-        } if (code == KeyEvent.VK_C) {
-            gp.gameState = gp.characterState;
-        } if (code == KeyEvent.VK_V) {
-            gp.gameState = gp.playState;
-        } if (code == KeyEvent.VK_F5) {
-            gp.saveLoad.save();
-        } if (code == KeyEvent.VK_F9) {
-            gp.saveLoad.load();
-        } if (code == KeyEvent.VK_1) {
-            gp.player.useSkill(0);
-        } else if (code == KeyEvent.VK_2) {
-            gp.player.useSkill(1);
-        } else if (code == KeyEvent.VK_3) {
-            gp.player.useSkill(2);
-        }
+        return distanceSquared < (detectionRange * detectionRange);
     }
 
-    public void pauseState(int code) {
-        if (code == KeyEvent.VK_UP || code == KeyEvent.VK_W) {
-            gp.ui.commandNum--;
-            if (gp.ui.commandNum < 0) {
-                gp.ui.commandNum = 2;
+    public void followPlayer() {
+        actionLockCounter++;
+
+        if (actionLockCounter >= 20) {
+            int dx = gp.player.worldX - worldX;
+            int dy = gp.player.worldY - worldY;
+
+            if (Math.abs(dx) > Math.abs(dy)) {
+                direction = (dx > 0) ? "right" : "left";
+            } else {
+                direction = (dy > 0) ? "down" : "up";
             }
+
+            actionLockCounter = 0;
         }
-        if (code == KeyEvent.VK_DOWN || code == KeyEvent.VK_S) {
-            gp.ui.commandNum++;
-            if (gp.ui.commandNum > 2) {
-                gp.ui.commandNum = 0;
-            }
-        }
-        if (code == KeyEvent.VK_ENTER) {
-            switch (gp.ui.commandNum) {
-                case 0:
-                    gp.gameState = gp.playState;
+
+        collisionOn = false;
+        gp.ch.checkTile(this);
+        int objIndex = gp.ch.checkObject(this, true);
+
+        if (!collisionOn && objIndex == 999) {
+            switch (direction) {
+                case "up":
+                    worldY -= speed;
                     break;
-                case 1:
-                    gp.saveLoad.save();
-                    gp.gameState = gp.playState;
+                case "down":
+                    worldY += speed;
                     break;
-                case 2:
-                    gp.gameState = gp.titleState;
-                    gp.ui.titleScreenState = 0;
+                case "left":
+                    worldX -= speed;
+                    break;
+                case "right":
+                    worldX += speed;
                     break;
             }
         }
     }
 
-    public void dialogueState(int code) {
-        if (gp.qm.isQuestionActive) {
-            if (gp.qm.isMultipleChoice) {
-                if (code == KeyEvent.VK_UP || code == KeyEvent.VK_W) {
-                    gp.ui.commandNum--;
-                    if (gp.ui.commandNum < 0) {
-                        gp.ui.commandNum = gp.qm.choices.length - 1;
-                    }
-                }
-                if (code == KeyEvent.VK_DOWN || code == KeyEvent.VK_S) {
-                    gp.ui.commandNum++;
-                    if (gp.ui.commandNum >= gp.qm.choices.length) {
-                        gp.ui.commandNum = 0;
-                    }
-                }
-                if (code == KeyEvent.VK_ENTER) {
-                    if (gp.qm.selectedAnswerIndex != -1) {
-                        gp.qm.processAnswer(gp.qm.choices[gp.qm.selectedAnswerIndex]);
-                    }
-                }
+    public void draw(Graphics2D g2) {
+        int screenX = worldX - gp.player.worldX + gp.player.screenX;
+        int screenY = worldY - gp.player.worldY + gp.player.screenY;
+        BufferedImage image = null;
+
+        if (worldX + gp.tileSize > gp.player.worldX - gp.player.screenX &&
+                worldX - gp.tileSize < gp.player.worldX + gp.player.screenX &&
+                worldY + gp.tileSize > gp.player.worldY - gp.player.screenY &&
+                worldY - gp.tileSize < gp.player.worldY + gp.player.screenY) {
+
+            switch (direction) {
+                case "up":
+                    image = (spriteNum == 1) ? up1 : up2;
+                    break;
+                case "down":
+                    image = (spriteNum == 1) ? down1 : down2;
+                    break;
+                case "left":
+                    image = (spriteNum == 1) ? left1 : left2;
+                    break;
+                case "right":
+                    image = (spriteNum == 1) ? right1 : right2;
+                    break;
             }
-        } else {
-            gp.gameState = gp.playState;
+
+            if (entityType == 2 && maxLife > 0) {
+                g2.setColor(new Color(35, 35, 35));
+                g2.fillRect(screenX, screenY - 10, gp.tileSize, 5);
+
+                float healthPercentage = (float) life / maxLife;
+                int healthWidth = (int) (gp.tileSize * healthPercentage);
+                g2.setColor(new Color(255, 0, 30));
+                g2.fillRect(screenX, screenY - 10, healthWidth, 5);
+
+                g2.setColor(Color.WHITE);
+                g2.drawRect(screenX, screenY - 10, gp.tileSize, 5);
+            }
+
+            if (invincible == true) {
+                g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.4f));
+            }
+
+            g2.drawImage(image, screenX, screenY, gp.tileSize, gp.tileSize, null);
+
+            g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
         }
     }
 
-    public void characterState(int code) {
-
-        if(code == KeyEvent.VK_C) {
-            gp.gameState = gp.playState;
-        } if(code == KeyEvent.VK_W || code == KeyEvent.VK_UP) {
-            if(gp.ui.slotRow != 0) {
-                gp.ui.slotRow--;
-            }
-        } if(code == KeyEvent.VK_A || code == KeyEvent.VK_LEFT) {
-            if(gp.ui.slotCol != 0) {
-                gp.ui.slotCol--;
-            }
-        } if(code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN) {
-            if(gp.ui.slotRow != 3) {
-                gp.ui.slotRow++;
-            }
-        } if(code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) {
-            if(gp.ui.slotCol != 4) {
-                gp.ui.slotCol++;
-            }
-        } if(code == KeyEvent.VK_ENTER) {
-            int slotIndex = gp.ui.slotCol + (gp.ui.slotRow * 5);
-            if(slotIndex < gp.player.inventory.size()) {
-                gp.player.useItem(slotIndex);
-                gp.gameState = gp.playState;
-            }
-        }
+    protected void takeDamage(int i, int i1) {
     }
 
-    @Override
-    public void keyReleased(KeyEvent e) {
-        int code = e.getKeyCode();
+    public BufferedImage setup(String imagePath, int width, int height) {
+        UtilityTool uTool = new UtilityTool();
+        BufferedImage image = null;
 
-        if (code == KeyEvent.VK_UP || code == KeyEvent.VK_W) {
-            upPressed = false;
-        } if (code == KeyEvent.VK_DOWN || code == KeyEvent.VK_S) {
-            downPressed = false;
-        } if (code == KeyEvent.VK_LEFT || code == KeyEvent.VK_A) {
-            leftPressed = false;
-        } if (code == KeyEvent.VK_RIGHT || code == KeyEvent.VK_D) {
-            rightPressed = false;
-        } if (code == KeyEvent.VK_SPACE) {
-            spacePressed = false;
-        } else if (gp.gameState == gp.creditsState) {
-            if (code == KeyEvent.VK_UP || code == KeyEvent.VK_DOWN) {
-                gp.ui.commandNum = 3;
-            } if (code == KeyEvent.VK_ENTER) {
-                if (gp.ui.commandNum == 3) {
-                    gp.gameState = gp.titleState;
-                    gp.ui.titleScreenState = 0;
-                }
-            } if (code == KeyEvent.VK_ESCAPE) {
-                gp.gameState = gp.titleState;
-                gp.ui.titleScreenState = 0;
-            }
+        try {
+            image = ImageIO.read(getClass().getResourceAsStream(imagePath + ".png"));
+            image = uTool.scaleImage(image, width, height);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+        return image;
     }
+
 }
